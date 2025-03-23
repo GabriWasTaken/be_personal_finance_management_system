@@ -1,7 +1,14 @@
 {
+  "type": "module",
+  "scripts": {
+    "start": "nodemon --env-file=.env server.js"
+  },
   "dependencies": {
     "@fastify/postgres": "^6.0.2",
     "fastify": "^5.2.1",
     "pg": "^8.14.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }
