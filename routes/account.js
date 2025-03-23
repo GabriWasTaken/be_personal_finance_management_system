@@ -26,7 +26,30 @@ async function routes (fastify, options) {
 
 
     return { hello: 'world' }
+  });
+
+  const accountBodyJsonSchema = {
+    type: 'object',
+    required: ['name'],
+    properties: {
+      name: { type: 'string' },
+    },
+  }
+
+  const schema = {
+    body: accountBodyJsonSchema,
+  }
+
+  fastify.post('/account', { schema }, async (request, reply) => {
+    // we can use the `request.body` object to get the data sent by the client
+    const { name } = request.body
+    const result = await fastify.pg.query(
+      'INSERT INTO accounts (name) VALUES ($1) RETURNING *',
+      [name],
+    )
+    return result.rows
   })
+
 }
 
 export default routes;
