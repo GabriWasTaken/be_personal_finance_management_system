@@ -40,7 +40,7 @@ async function routes (fastify, options) {
     body: accountBodyJsonSchema,
   }
 
-  fastify.post('/account', { schema }, async (request, reply) => {
+  fastify.post('/accounts', { schema }, async (request, reply) => {
     // we can use the `request.body` object to get the data sent by the client
     const { name } = request.body
     const result = await fastify.pg.query(
@@ -48,6 +48,15 @@ async function routes (fastify, options) {
       [name],
     )
     return result.rows
+  })
+
+  fastify.get('/accounts', (req, reply) => {
+    fastify.pg.query(
+      'SELECT * FROM accounts',
+      function onResult (err, result) {
+        reply.send(err || result.rows);
+      }
+    )
   })
 
 }
