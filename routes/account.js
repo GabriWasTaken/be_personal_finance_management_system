@@ -47,14 +47,14 @@ async function routes (fastify, options) {
       'INSERT INTO accounts (name) VALUES ($1) RETURNING *',
       [name],
     )
-    return result.rows
+    return result
   })
 
   fastify.get('/accounts', (req, reply) => {
     fastify.pg.query(
       'SELECT * FROM accounts',
       function onResult (err, result) {
-        reply.send(err || result.rows);
+        reply.send(err || result);
       }
     )
   })
