@@ -8,7 +8,7 @@ import fastifyPostgres from '@fastify/postgres'
  */
 async function dbConnector (fastify, options) {
   fastify.register(fastifyPostgres, {
-    connectionString: `postgres://${process.env.DB_USERNAME}:${process.env.DB_PSW}@localhost:5432/finance`,
+    connectionString: `postgres://${process.env.DB_USERNAME}:${process.env.DB_PSW}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_SCHEMA}`,
   })
 }
 
