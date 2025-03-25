@@ -46,7 +46,7 @@ async function routes (fastify, options) {
   })
 
   fastify.get('/financials', (req, reply) => {
-    if(req.query.id_account === "undefined"){
+    if(!req.query.id_account){
       fastify.pg.query(
         'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id',
         function onResult (err, result) {
