@@ -35,5 +35,4 @@ fastify.listen({ port: 3001 }, function (err, address) {
     fastify.log.error(err)
     process.exit(1)
   }
-  // Server is now listening on ${address}
 })

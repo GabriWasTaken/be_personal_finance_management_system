@@ -1,5 +1,3 @@
-// our-first-route.js
-
 /**
  * Encapsulates the routes
  * @param {FastifyInstance} fastify  Encapsulated Fastify Instance
@@ -45,22 +43,31 @@ async function routes (fastify, options) {
     )
   })
 
-  fastify.get('/financials', (req, reply) => {
+  fastify.get('/financials', async (req, reply) => {
+
+    let rowsNumber = 0;
+    let result;
+
+    const client = await fastify.pg.connect()
+    const { rows } = await client.query(
+      'SELECT COUNT(*) AS total_rows FROM financials' + (req.query.id_account ? ' WHERE id_account=$1' : ''),
+      req.query.id_account ? [req.query.id_account] : []
+    )
+    
+    rowsNumber = rows[0].total_rows;
+
     if(!req.query.id_account){
-      fastify.pg.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id',
-        function onResult (err, result) {
-          reply.send(err || {rows:result.rows, rowCount: result.rowCount});
-        }
+      result =await client.query(
+        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id OFFSET $1 LIMIT $2', [Number(req.query.page), Number(req.query.limit)],
       )
     } else {
-      fastify.pg.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE id_account=$1', [req.query.id_account],
-        function onResult (err, result) {
-          reply.send(err || {rows:result.rows, rowCount: result.rowCount});
-        }
+      result = await client.query(
+        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE id_account=$1 OFFSET $2 LIMIT $3', [req.query.id_account, Number(req.query.page), Number(req.query.limit)],
       )
     }
+
+    client.release()
+    return {rows:result.rows, rowCount: rowsNumber}
   })
 
 }
