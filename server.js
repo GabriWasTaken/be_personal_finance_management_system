@@ -27,7 +27,7 @@ fastify.register(fjwt, {
     return getJwks.getPublicKey({
       domain: process.env.JWT_ISSUER,
       alg: 'ES384',
-      kid: 'LCPrW7v2KI9_mdQCLAdymkJvjDBV07Z_KUndcLPPlUE',
+      kid: process.env.JWT_KID,
     })
   }
 })
@@ -38,11 +38,11 @@ fastify.register(dbConnector)
 fastify.addHook('preHandler', (request, reply, done) => {
   request.jwtVerify().then(() => {
     console.log("token verified")
+    done()
   }).catch((err) => {
-    reply.send(err)
+    return reply.send(err)
   })
 
-  done()
 })
 
 fastify.register(account)
