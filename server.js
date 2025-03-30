@@ -36,8 +36,8 @@ fastify.register(fastifyCors, { origin: process.env.FE_ORIGIN })
 fastify.register(dbConnector)
 
 fastify.addHook('preHandler', (request, reply, done) => {
-  request.jwtVerify().then(() => {
-    console.log("token verified")
+  request.jwtVerify().then((jwt) => {
+    request.user = { id: jwt.sub };
     done()
   }).catch((err) => {
     return reply.send(err)

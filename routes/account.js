@@ -5,22 +5,11 @@
  */
 async function routes (fastify, options) {
 
-  const accountBodyJsonSchema = {
-    type: 'string',
-    required: ['name'],
-  }
-
-  const schema = {
-    body: accountBodyJsonSchema,
-  }
-
-  fastify.post('/accounts', { schema }, async (request, reply) => {
-    // we can use the `request.body` object to get the data sent by the client
-    const body = JSON.parse(request.body);
-    const { name } = body;
+  fastify.post('/accounts', { }, async (request, reply) => {
+    const { name } = request.body;
     const result = await fastify.pg.query(
-      'INSERT INTO accounts (name) VALUES ($1) RETURNING *',
-      [name],
+      'INSERT INTO accounts (name, user_id) VALUES ($1, $2) RETURNING *',
+      [name, request.user.id],
     )
     return result
   })
@@ -35,7 +24,7 @@ async function routes (fastify, options) {
     rowsNumber = rows[0].total_rows;
 
     result = await client.query(
-      'SELECT * FROM accounts OFFSET $1 LIMIT $2', [Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      'SELECT * FROM accounts WHERE user_id=$1 OFFSET $2 LIMIT $3', [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
     
     client.release()
@@ -52,25 +41,24 @@ async function routes (fastify, options) {
   })
 
   fastify.get('/financials', async (req, reply) => {
-
     let rowsNumber = 0;
     let result;
 
     const client = await fastify.pg.connect()
     const { rows } = await client.query(
-      'SELECT COUNT(*) AS total_rows FROM financials' + (req.query.id_account ? ' WHERE id_account=$1' : ''),
-      req.query.id_account ? [req.query.id_account] : []
+      'SELECT COUNT(*) AS total_rows FROM financials WHERE user_id=$1' + (req.query.id_account ? ' AND id_account=$2' : ''),
+      req.query.id_account ? [req.user.id, req.query.id_account] : [req.user.id]
     )
     
     rowsNumber = rows[0].total_rows;
 
     if(!req.query.id_account){
       result =await client.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id OFFSET $1 LIMIT $2', [Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE financials.user_id=$1 OFFSET $2 LIMIT $3', [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
     } else {
       result = await client.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE id_account=$1 OFFSET $2 LIMIT $3', [req.query.id_account, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE financials.user_id=$1 AND id_account=$2 OFFSET $3 LIMIT $4', [req.user.id, req.query.id_account, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
     }
 
