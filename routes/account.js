@@ -19,7 +19,7 @@ async function routes (fastify, options) {
     let result;
 
     const client = await fastify.pg.connect()
-    const { rows } = await client.query('SELECT COUNT(*) AS total_rows FROM accounts');
+    const { rows } = await client.query('SELECT COUNT(*) AS total_rows FROM accounts WHERE user_id=$1', [req.user.id]);
     
     rowsNumber = rows[0].total_rows;
 
@@ -64,6 +64,17 @@ async function routes (fastify, options) {
 
     client.release()
     return {rows:result.rows, rowCount: rowsNumber}
+  })
+
+
+  fastify.post('/financials', async (req, reply) => {
+    console.log(req.body)
+    const { amount, name, id_account } = req.body;
+    const result = await fastify.pg.query(
+      'INSERT INTO financials (name, amount, id_account, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, amount, id_account, req.user.id],
+    )
+    return result
   })
 
 }
