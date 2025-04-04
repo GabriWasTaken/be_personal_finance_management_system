@@ -68,10 +68,10 @@ async function routes (fastify, options) {
 
 
   fastify.post('/financials', async (req, reply) => {
-    const { amount, name, id_account } = req.body;
+    const { amount, name, id_account, id_category, id_subcategory} = req.body;
     const result = await fastify.pg.query(
-      'INSERT INTO financials (name, amount, id_account, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, amount, id_account, req.user.id],
+      'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [name, amount, id_account, req.user.id, id_category, id_subcategory],
     )
     return result
   })
@@ -95,10 +95,36 @@ async function routes (fastify, options) {
   })
 
   fastify.post('/categories', async (req, reply) => {
-    const { tag } = req.body;
+    const { category } = req.body;
     const result = await fastify.pg.query(
       'INSERT INTO categories (name, user_id) VALUES ($1, $2) RETURNING *',
-      [tag, req.user.id],
+      [category, req.user.id],
+    )
+    return result
+  })
+
+  fastify.get('/subcategories', async (req, reply) => {
+    let rowsNumber = 0;
+    let result;
+
+    const client = await fastify.pg.connect()
+    const { rows } = await client.query('SELECT COUNT(*) AS total_rows FROM subcategories WHERE user_id=$1 AND category_id=$2', [req.user.id, req.query.id_category]);
+    
+    rowsNumber = rows[0].total_rows;
+
+    result = await client.query(
+      'SELECT * FROM subcategories WHERE user_id=$1 AND category_id=$2 OFFSET $3 LIMIT $4', [req.user.id, req.query.id_category, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+    )
+    
+    client.release()
+    return {rows:result.rows, rowCount: rowsNumber}
+  })
+
+  fastify.post('/subcategories', async (req, reply) => {
+    const { subcategory, categoryId } = req.body;
+    const result = await fastify.pg.query(
+      'INSERT INTO subcategories (name, category_id, user_id) VALUES ($1, $2, $3) RETURNING *',
+      [subcategory, categoryId, req.user.id],
     )
     return result
   })
