@@ -17,6 +17,8 @@ const fastify = Fastify({
 /*
   * TODO:
   * introduce typescript
+  * schemas
+  * migrations
 */
 
 const getJwks = buildGetJwks({ jwksPath: "/jwks" });
