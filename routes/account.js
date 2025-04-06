@@ -54,11 +54,27 @@ async function routes (fastify, options) {
 
     if(!req.query.id_account){
       result =await client.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE financials.user_id=$1 OFFSET $2 LIMIT $3', [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+        `SELECT financials.*, accounts.name as account_name, categories.name as category_name, subcategories.name as subcategory_name
+        FROM financials 
+        JOIN accounts ON financials.id_account = accounts.id 
+        JOIN categories ON financials.category_id = categories.id 
+        JOIN subcategories ON financials.subcategory_id = subcategories.id 
+        WHERE financials.user_id=$1 
+        ORDER BY transaction_date DESC 
+        OFFSET $2 LIMIT $3`, 
+        [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
     } else {
       result = await client.query(
-        'SELECT financials.*, accounts.name as account_name FROM financials JOIN accounts ON financials.id_account = accounts.id WHERE financials.user_id=$1 AND id_account=$2 OFFSET $3 LIMIT $4', [req.user.id, req.query.id_account, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+        `SELECT financials.*, accounts.name as account_name, categories.name as category_name, subcategories.name as subcategory_name
+        FROM financials 
+        JOIN accounts ON financials.id_account = accounts.id
+        JOIN categories ON financials.category_id = categories.id
+        JOIN subcategories ON financials.subcategory_id = subcategories.id 
+        WHERE financials.user_id=$1 AND id_account=$2
+        ORDER BY transaction_date DESC 
+        OFFSET $3 LIMIT $4`,
+        [req.user.id, req.query.id_account, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
     }
 
@@ -72,6 +88,15 @@ async function routes (fastify, options) {
     const result = await fastify.pg.query(
       'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id, transaction_date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
       [name, amount, id_account, req.user.id, id_category, id_subcategory, transactionDate],
+    )
+    return result
+  })
+
+  fastify.delete('/financials', async (req, reply) => {
+    console.log("delete", req.id)
+    const result = await fastify.pg.query(
+      'DELETE FROM financials WHERE id=$1',
+      [Number(req.query.id)],
     )
     return result
   })
