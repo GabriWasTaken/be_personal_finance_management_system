@@ -34,7 +34,7 @@ fastify.register(fjwt, {
   }
 })
 
-fastify.register(fastifyCors, { origin: process.env.FE_ORIGIN })
+fastify.register(fastifyCors, { origin: process.env.FE_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'] })
 fastify.register(dbConnector)
 
 fastify.addHook('preHandler', (request, reply, done) => {
