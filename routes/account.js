@@ -84,11 +84,23 @@ async function routes (fastify, options) {
 
 
   fastify.post('/financials', async (req, reply) => {
-    const { amount, name, id_account, id_category, id_subcategory, transactionDate} = req.body;
-    const result = await fastify.pg.query(
-      'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id, transaction_date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [name, amount, id_account, req.user.id, id_category, id_subcategory, transactionDate],
-    )
+    const { amount, name, id_account, id_category, id_subcategory, transactionDate, type, id_account_to} = req.body;
+    let result;
+    if (type !== "transfer"){
+      result = await fastify.pg.query(
+        'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id, transaction_date, type, is_transfer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [name, amount, id_account, req.user.id, id_category, id_subcategory, transactionDate, type, false],
+      )
+    } else {
+      await fastify.pg.query(
+        'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id, transaction_date, type, is_transfer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [name, amount, id_account, req.user.id, id_category, id_subcategory, transactionDate, "expense", true],
+      )
+      result = await fastify.pg.query(
+        'INSERT INTO financials (name, amount, id_account, user_id, category_id, subcategory_id, transaction_date, type, is_transfer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [name, amount, id_account_to, req.user.id, id_category, id_subcategory, transactionDate, "income", true],
+      )
+    }
     return result
   })
 
