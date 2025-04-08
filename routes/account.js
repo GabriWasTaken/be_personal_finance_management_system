@@ -24,7 +24,17 @@ async function routes (fastify, options) {
     rowsNumber = rows[0].total_rows;
 
     result = await client.query(
-      'SELECT * FROM accounts WHERE user_id=$1 OFFSET $2 LIMIT $3', [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      `SELECT accounts.name, accounts.id, 
+       SUM(CASE 
+               WHEN financials.type = 'income' THEN financials.amount
+               WHEN financials.type = 'expense' THEN -financials.amount
+               ELSE 0
+           END) AS net_total
+      FROM financials 
+      JOIN accounts ON accounts.id = financials.id_account
+      WHERE accounts.user_id=$1
+      GROUP BY accounts.id
+      OFFSET $2 LIMIT $3`, [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
     
     client.release()
