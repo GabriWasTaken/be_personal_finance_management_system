@@ -94,9 +94,29 @@ async function routes (fastify, options) {
       [req.user.id],
     );
 
+    const expensesByCategory = await client.query(
+      `SELECT
+      financials.category_id, categories.name as category_name,
+      SUM(CASE 
+            WHEN financials.type = 'expense' THEN financials.amount
+            ELSE 0
+            END) AS total_expense
+      FROM financials
+      JOIN categories ON financials.category_id = categories.id
+      WHERE financials.user_id = $1
+      GROUP BY financials.category_id, categories.name
+      HAVING SUM(CASE 
+             WHEN financials.type = 'expense' THEN financials.amount
+             ELSE 0
+           END) > 0
+      ORDER BY total_expense DESC`,
+      [req.user.id],
+    )
+
     client.release();
 
     return { 
+      expensesByCategory: expensesByCategory.rows,
       allTime: {
         total_expense: allTimeResults.rows[0].total_expense, 
         total_income: allTimeResults.rows[0].total_income

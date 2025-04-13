@@ -19,6 +19,7 @@ const fastify = Fastify({
   * introduce typescript
   * schemas
   * migrations
+  * bug: retrieve financials without subcategory
 */
 
 const getJwks = buildGetJwks({ jwksPath: "/jwks" });
