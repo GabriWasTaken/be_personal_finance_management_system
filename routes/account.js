@@ -18,22 +18,30 @@ async function routes (fastify, options) {
     let rowsNumber = 0;
     let result;
 
+    console.log("req.user.id", req.user.id);
+
     const client = await fastify.pg.connect()
     const { rows } = await client.query('SELECT COUNT(*) AS total_rows FROM accounts WHERE user_id=$1', [req.user.id]);
 
     rowsNumber = rows[0].total_rows;
+    console.log("rowsNumber", rowsNumber);
 
     result = await client.query(
-      `SELECT accounts.name, accounts.id, 
-       SUM(CASE 
-               WHEN financials.type = 'income' THEN financials.amount
-               WHEN financials.type = 'expense' THEN -financials.amount
-               ELSE 0
-           END) AS net_total
-      FROM financials, accounts
-      WHERE accounts.user_id=$1
-      GROUP BY accounts.id
-      OFFSET $2 LIMIT $3`, [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      `SELECT a.name, a.id, 
+        COALESCE(
+          SUM(
+            CASE
+              WHEN f.type = 'income' THEN f.amount
+              WHEN f.type = 'expense' THEN -f.amount
+              ELSE 0
+            END
+          ),0
+        ) AS net_total
+      FROM accounts AS a
+      LEFT JOIN financials AS f ON a.id = f.id_account
+      WHERE a.user_id = $1
+      GROUP BY a.id, a.name
+      OFFSET $2 LIMIT $3;`, [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
 
     client.release()
@@ -200,6 +208,15 @@ async function routes (fastify, options) {
     console.log("delete", req.id)
     const result = await fastify.pg.query(
       'DELETE FROM financials WHERE id=$1',
+      [Number(req.query.id)],
+    )
+    return result
+  })
+
+  fastify.delete('/accounts', async (req, reply) => {
+    console.log("delete", req.id)
+    const result = await fastify.pg.query(
+      'DELETE FROM accounts WHERE id=$1',
       [Number(req.query.id)],
     )
     return result
