@@ -40,8 +40,9 @@ async function routes (fastify, options) {
       FROM accounts AS a
       LEFT JOIN financials AS f ON a.id = f.id_account
       WHERE a.user_id = $1
+      ${req.query.search ? 'AND a.name ILIKE \'%\' || $4 || \'%\'' : ''}
       GROUP BY a.id, a.name
-      OFFSET $2 LIMIT $3;`, [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      OFFSET $2 LIMIT $3;`, req.query.search ? [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit), req.query.search] : [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
 
     client.release()
@@ -233,7 +234,7 @@ async function routes (fastify, options) {
     rowsNumber = rows[0].total_rows;
 
     result = await client.query(
-      'SELECT * FROM categories WHERE user_id=$1 OFFSET $2 LIMIT $3', [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      `SELECT * FROM categories WHERE user_id=$1 ${req.query.search ? 'AND name ILIKE \'%\' || $4 || \'%\'' : ''} OFFSET $2 LIMIT $3`, req.query.search ? [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit), req.query.search]: [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
 
     client.release()
@@ -259,7 +260,7 @@ async function routes (fastify, options) {
     rowsNumber = rows[0].total_rows;
 
     result = await client.query(
-      'SELECT * FROM subcategories WHERE user_id=$1 AND category_id=$2 OFFSET $3 LIMIT $4', [req.user.id, req.query.id_category, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
+      `SELECT * FROM subcategories WHERE user_id=$1 AND category_id=$2 ${req.query.search ? 'AND name ILIKE \'%\' || $5 || \'%\'' : ''} OFFSET $3 LIMIT $4`,  req.query.search ? [req.user.id, req.query.id_category, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit), req.query.search]: [req.user.id, req.query.id_category, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
     )
 
     client.release()
