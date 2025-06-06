@@ -223,6 +223,15 @@ async function routes (fastify, options) {
     return result
   })
 
+  fastify.delete('/categories', async (req, reply) => {
+    console.log("delete", req.id)
+    const result = await fastify.pg.query(
+      'DELETE FROM categories WHERE id=$1',
+      [Number(req.query.id)],
+    )
+    return result
+  })
+
 
   fastify.get('/categories', async (req, reply) => {
     let rowsNumber = 0;
