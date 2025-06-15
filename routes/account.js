@@ -17,14 +17,10 @@ async function routes(fastify, options) {
   fastify.get('/accounts', async (req, reply) => {
     let rowsNumber = 0;
     let result;
-
-    console.log("req.user.id", req.user.id);
-
     const client = await fastify.pg.connect()
     const { rows } = await client.query('SELECT COUNT(*) AS total_rows FROM accounts WHERE user_id=$1', [req.user.id]);
 
     rowsNumber = rows[0].total_rows;
-    console.log("rowsNumber", rowsNumber);
 
     result = await client.query(
       `SELECT a.name, a.id, 
@@ -153,15 +149,18 @@ async function routes(fastify, options) {
 
     rowsNumber = rows[0].total_rows;
 
+    const sortKey = req.query?.sort_key || 'transaction_date';
+    const sortDirection = req.query.sort_direction?.toUpperCase() || 'DESC';
+
     if (!req.query.id_account) {
       result = await client.query(
         `SELECT financials.*, accounts.name as account_name, categories.name as category_name, subcategories.name as subcategory_name
         FROM financials 
         JOIN accounts ON financials.id_account = accounts.id 
         JOIN categories ON financials.category_id = categories.id 
-        JOIN subcategories ON financials.subcategory_id = subcategories.id 
+        LEFT JOIN subcategories ON financials.subcategory_id = subcategories.id 
         WHERE financials.user_id=$1 
-        ORDER BY transaction_date DESC 
+        ORDER BY ${sortKey} ${sortDirection}
         OFFSET $2 LIMIT $3`,
         [req.user.id, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
@@ -171,9 +170,9 @@ async function routes(fastify, options) {
         FROM financials 
         JOIN accounts ON financials.id_account = accounts.id
         JOIN categories ON financials.category_id = categories.id
-        JOIN subcategories ON financials.subcategory_id = subcategories.id 
+        LEFT JOIN subcategories ON financials.subcategory_id = subcategories.id 
         WHERE financials.user_id=$1 AND id_account=$2
-        ORDER BY transaction_date DESC 
+        ORDER BY ${sortKey} ${sortDirection}
         OFFSET $3 LIMIT $4`,
         [req.user.id, req.query.id_account, Number(req.query.page) * Number(req.query.limit), Number(req.query.limit)],
       )
