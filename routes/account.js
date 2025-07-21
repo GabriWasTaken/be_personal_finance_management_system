@@ -321,44 +321,46 @@ async function routes(fastify, options) {
 
   fastify.get('/export', async (req, reply) => {
     let result;
-
-    const client = await fastify.pg.connect()
+    const client = await fastify.pg.connect();
 
     const sortKey = 'transaction_date';
     const sortDirection = 'DESC';
 
-    result = await client.query(
-      `SELECT financials.*, accounts.name as account_name, categories.name as category_name, subcategories.name as subcategory_name
-      FROM financials 
-      JOIN accounts ON financials.id_account = accounts.id 
-      JOIN categories ON financials.category_id = categories.id 
-      LEFT JOIN subcategories ON financials.subcategory_id = subcategories.id 
-      WHERE financials.user_id=$1 
-      ORDER BY ${sortKey} ${sortDirection}`,
-      [req.user.id],
-    )
+    try {
+      result = await client.query(
+        `SELECT financials.*, accounts.name as account_name, categories.name as category_name, subcategories.name as subcategory_name
+        FROM financials
+        JOIN accounts ON financials.id_account = accounts.id
+        JOIN categories ON financials.category_id = categories.id
+        LEFT JOIN subcategories ON financials.subcategory_id = subcategories.id
+        WHERE financials.user_id=$1
+        ORDER BY ${sortKey} ${sortDirection}`,
+        [req.user.id],
+      );
 
-    const csvContent = result.rows.map(row => Object.values(row).join(',')).join('\n');
-    const csvHeaders = Object.keys(result.rows[0]).join(',');
-    const fullCsv = csvHeaders + '\n' + csvContent;
-
-    console.log("\n csvContent: ", csvContent)
-    console.log("\n csvHeaders: ", csvHeaders)
-    console.log("\n fullCsv: ", fullCsv)
-
-    client.release();
-
-    fs.writeFile('./export.csv', fullCsv, 'utf8', function (err) {
-      if (err) {
-        console.log('Si è verificato un errore - file non salvato o corrotto.: ', err);
-        reply.code(500).send({ error: 'Errore durante il salvataggio del file.' });
-      } else {
-        console.log('File CSV salvato con successo!');
-        reply.send({ message: 'Esportazione CSV completata con successo.' });
+      // Se non ci sono righe, gestisci il caso in cui il CSV sarebbe vuoto
+      if (result.rows.length === 0) {
+        return reply.code(204).send(); // 204 No Content
       }
-    });
 
-  })
+      const csvHeaders = Object.keys(result.rows[0]).join(',');
+      const csvContent = result.rows.map(row => Object.values(row).join(',')).join('\n');
+      const fullCsv = csvHeaders + '\n' + csvContent;
+
+      // Imposta gli header per il download del file
+      reply.header('Content-Type', 'text/csv');
+      reply.header('Content-Disposition', 'attachment; filename="export.csv"');
+      return reply.send(fullCsv); // Invia direttamente il contenuto CSV
+
+      console.log('File CSV inviato con successo al client!');
+
+    } catch (err) {
+      console.error('Si è verificato un errore durante l\'esportazione CSV:', err);
+      return reply.code(500).send({ error: 'Errore durante l\'esportazione del file CSV.' });
+    } finally {
+      client.release(); // Assicurati che la connessione venga sempre rilasciata
+    }
+  });
 
 }
 
